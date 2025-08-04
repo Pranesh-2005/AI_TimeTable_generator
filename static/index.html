@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Timetable AI Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --dark-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --light-bg: #f8fafc;
+            --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            --card-shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.12);
+            --border-radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 4rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.3;
+        }
+
+        .header .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-weight: 700;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header .lead {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+        }
+
+        .card {
+            border: none;
+            box-shadow: var(--card-shadow);
+            border-radius: var(--border-radius);
+            margin-bottom: 2rem;
+            transition: var(--transition);
+            background: white;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            box-shadow: var(--card-shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+            padding: 1.5rem;
+            font-weight: 600;
+            color: #4c63d2;
+        }
+
+        .card-header h5 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 500;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-outline-primary {
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary-gradient);
+            border-color: transparent;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-secondary {
+            border: 2px solid #6c757d;
+            color: #6c757d;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .btn-outline-secondary:hover {
+            background: #6c757d;
+            border-color: #6c757d;
+            transform: translateY(-1px);
+        }
+
+        .btn-lg {
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            border-radius: 16px;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            background: #fafbfc;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: white;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: var(--border-radius);
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
+            transform: translateY(-2px);
+        }
+
+        .upload-area:hover::before {
+            opacity: 0.05;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
+            transform: scale(1.02);
+        }
+
+        .upload-area.dragover::before {
+            opacity: 0.1;
+        }
+
+        .upload-area > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-area i {
+            color: #9ca3af;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area h5 {
+            color: #374151;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-area p {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+        }
+
+        .analysis-result {
+            background: linear-gradient(135deg, #f0fff4 0%, #ecfdf5 100%);
+            border: 1px solid #a7f3d0;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .progress {
+            height: 6px;
+            border-radius: 10px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: var(--primary-gradient);
+            border-radius: 10px;
+            transition: width 0.6s ease;
+        }
+
+        .step {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loading {
+            display: none;
+        }
+
+        .spinner-border {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 1rem 1.5rem;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #f0fff4 0%, #ecfdf5 100%);
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .badge {
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+
+        .badge.bg-primary {
+            background: var(--primary-gradient) !important;
+        }
+
+        .badge.bg-success {
+            background: var(--success-gradient) !important;
+        }
+
+        .badge.bg-info {
+            background: var(--warning-gradient) !important;
+        }
+
+        .badge.bg-secondary {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
+        }
+
+        .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+
+        .form-check-input:focus {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+        }
+
+        .form-check-label {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .table {
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            background: white;
+        }
+
+        .table thead th {
+            background: var(--primary-gradient);
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 1rem;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            border-color: #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .table tbody tr:hover {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .timetable-container {
+            overflow-x: auto;
+            border-radius: var(--border-radius);
+        }
+
+        .error-message {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .text-primary {
+            color: #667eea !important;
+        }
+
+        .bg-light {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+        }
+
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .header .lead {
+                font-size: 1rem;
+            }
+            
+            .card-body {
+                padding: 1.5rem;
+            }
+            
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-gradient);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+        }
+
+        /* Enhanced animations */
+        .btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        /* Loading animation improvements */
+        .loading .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border-width: 4px;
+            border-color: #667eea;
+            border-right-color: transparent;
+        }
+
+        /* File info styling */
+        #fileInfo .alert {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #fileInfo .btn {
+            margin-left: 1rem;
+        }
+
+        /* Progress steps styling */
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+        }
+
+        .progress-steps small {
+            font-weight: 500;
+            color: #6b7280;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header text-center">
+        <div class="container">
+            <h1><i class="fas fa-robot me-3"></i>Dynamic Timetable AI Generator</h1>
+            <p class="lead">Upload your existing timetable CSV or create from scratch with AI</p>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <!-- Debug Info -->
+        <div id="debugInfo" style="display: none;" class="alert alert-warning">
+            <strong>Debug:</strong> <span id="debugText"></span>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar" role="progressbar" style="width: 25%"></div>
+                </div>
+                <div class="progress-steps">
+                    <small class="text-muted">Step 1: Upload/Configure</small>
+                    <small class="text-muted">Step 2: Requirements</small>
+                    <small class="text-muted">Step 3: Generate</small>
+                    <small class="text-muted">Step 4: Results</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Upload or Configure -->
+        <div id="step1" class="step active">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-upload me-2"></i>Upload Reference Timetable (Optional)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="upload-area" id="uploadArea">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                <h5>Drag & Drop CSV File</h5>
+                                <p class="text-muted">Or click to browse files</p>
+                                <input type="file" id="csvFile" accept=".csv" style="display: none;">
+                                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('csvFile').click()">
+                                    Choose File
+                                </button>
+                            </div>
+                            
+                            <div id="fileInfo" style="display: none;" class="mt-3">
+                                <div class="alert alert-success">
+                                    <div>
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <span id="fileName"></span>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="handleClearFile()">
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="analysisResult" style="display: none;" class="analysis-result">
+                                <h6><i class="fas fa-chart-bar me-2"></i>Analysis Results:</h6>
+                                <div id="analysisContent"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-cog me-2"></i>Basic Configuration</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Institution Name *</label>
+                                <input type="text" class="form-control" id="institutionName"
+                                        placeholder="Enter institution name" required>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Department *</label>
+                                    <input type="text" class="form-control" id="department"
+                                            placeholder="e.g., Computer Science" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Academic Year *</label>
+                                    <input type="text" class="form-control" id="academicYear"
+                                            placeholder="e.g., 2024-25" required>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Year *</label>
+                                    <select class="form-control" id="year" required>
+                                        <option value="">Select Year</option>
+                                        <option value="1">First Year</option>
+                                        <option value="2">Second Year</option>
+                                        <option value="3">Third Year</option>
+                                        <option value="4">Fourth Year</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Semester *</label>
+                                    <select class="form-control" id="semester" required>
+                                        <option value="">Select Semester</option>
+                                        <option value="ODD">ODD Semester</option>
+                                        <option value="EVEN">EVEN Semester</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Start Date *</label>
+                                    <input type="date" class="form-control" id="startDate" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">End Date *</label>
+                                    <input type="date" class="form-control" id="endDate" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Working Days *</label>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="monday" value="Monday" checked>
+                                            <label class="form-check-label" for="monday">Mon</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="tuesday" value="Tuesday" checked>
+                                            <label class="form-check-label" for="tuesday">Tue</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="wednesday" value="Wednesday" checked>
+                                            <label class="form-check-label" for="wednesday">Wed</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="thursday" value="Thursday" checked>
+                                            <label class="form-check-label" for="thursday">Thu</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="friday" value="Friday" checked>
+                                            <label class="form-check-label" for="friday">Fri</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="saturday" value="Saturday">
+                                            <label class="form-check-label" for="saturday">Sat</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-primary" onclick="handleNextStep(2)">
+                                    Next: Define Requirements <i class="fas fa-arrow-right ms-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Requirements -->
+        <div id="step2" class="step">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list-ul me-2"></i>Timetable Requirements & Constraints</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <h6>Academic Requirements</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Total Periods per Day</label>
+                                <input type="number" class="form-control" id="periodsPerDay" value="8" min="4" max="12">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Theory Sessions per Week</label>
+                                <input type="number" class="form-control" id="theorySessionsPerWeek" value="20" min="10" max="40">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Lab Sessions per Week</label>
+                                <input type="number" class="form-control" id="labSessionsPerWeek" value="6" min="2" max="15">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Elective Sessions per Week</label>
+                                <input type="number" class="form-control" id="electiveSessionsPerWeek" value="4" min="0" max="10">
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6">
+                            <h6>Scheduling Constraints</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Break Duration (minutes)</label>
+                                <input type="number" class="form-control" id="breakDuration" value="15" min="10" max="30">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Lunch Break Duration (minutes)</label>
+                                <input type="number" class="form-control" id="lunchBreakDuration" value="60" min="30" max="90">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Preferred Lab Duration (hours)</label>
+                                <input type="number" class="form-control" id="labDuration" value="3" min="2" max="4">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Maximum Consecutive Classes</label>
+                                <input type="number" class="form-control" id="maxConsecutive" value="3" min="2" max="5">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Additional Requirements</label>
+                        <textarea class="form-control" id="additionalRequirements" rows="3"
+                                   placeholder="Enter any specific requirements, constraints, or preferences..."></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-outline-secondary me-2" onclick="handlePrevStep(1)">
+                            <i class="fas fa-arrow-left me-2"></i>Previous
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="handleNextStep(3)">
+                            Next: Generate Timetable <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Generate -->
+        <div id="step3" class="step">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-magic me-2"></i>Generate Timetable</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div id="generateContent">
+                        <i class="fas fa-robot fa-4x text-primary mb-4"></i>
+                        <h4>Ready to Generate Your Timetable</h4>
+                        <p class="text-muted mb-4">Our AI will analyze your requirements and create an optimized timetable</p>
+                        
+                        <button type="button" class="btn btn-primary btn-lg" onclick="handleGenerateTimetable()">
+                            <i class="fas fa-magic me-2"></i>Generate AI Timetable
+                        </button>
+                    </div>
+                    <div id="generatingContent" class="loading">
+                        <div class="spinner-border text-primary mb-3"></div>
+                        <h5>Generating Your Timetable...</h5>
+                        <p class="text-muted">This may take a few moments</p>
+                    </div>
+                    <div class="text-end mt-4">
+                        <button type="button" class="btn btn-outline-secondary" onclick="handlePrevStep(2)">
+                            <i class="fas fa-arrow-left me-2"></i>Previous
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Results -->
+        <div id="step4" class="step">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-table me-2"></i>Generated Timetable</h5>
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="handleExportTimetable()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="handleStartOver()">
+                            <i class="fas fa-redo me-1"></i>Start Over
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="timetableContent">
+                        <!-- Generated timetable will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Bootstrap JS first -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.bundle.min.js"></script>
+    <!-- Main Application Script -->
+    <script>
+        console.log('Loading main app script...');
+        // Global variables
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        let uploadedFile = null;
+        let analysisData = null;
+        let currentStep = 1;
+
+        // Initialize app when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing app...');
+            initializeApp();
+        });
+
+        function initializeApp() {
+            console.log('App initialized');
+            
+            // Set default dates
+            const today = new Date();
+            const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+            
+            document.getElementById('startDate').value = today.toISOString().split('T')[0];
+            document.getElementById('endDate').value = nextMonth.toISOString().split('T')[0];
+            
+            // Setup file upload
+            setupFileUpload();
+        }
+
+        function setupFileUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('csvFile');
+            
+            // Click to upload
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileUpload(files[0]);
+                }
+            });
+            
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+        }
+
+        async function handleFileUpload(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('Please upload a CSV file');
+                return;
+            }
+            
+            uploadedFile = file;
+            
+            // Show file info
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileInfo').style.display = 'block';
+            
+            // Analyze file
+            await analyzeUploadedFile(file);
+        }
+
+        async function analyzeUploadedFile(file) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch(`${API_BASE_URL}/analyze-csv`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    analysisData = result.analysis;
+                    displayAnalysisResults(result.analysis);
+                    autoPopulateFromAnalysis(result.analysis);
+                } else {
+                    alert('Error analyzing file: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error analyzing file:', error);
+                alert('Error analyzing file. Please try again.');
+            }
+        }
+
+        function displayAnalysisResults(analysis) {
+            const content = document.getElementById('analysisContent');
+            
+            let html = '<div class="row">';
+            
+            // Subjects found
+            if (analysis.subjects && analysis.subjects.length > 0) {
+                html += `<div class="col-md-6">
+                    <strong>Subjects Found (${analysis.subjects.length}):</strong>
+                    <ul class="list-unstyled mt-1">`;
+                analysis.subjects.slice(0, 5).forEach(subject => {
+                    html += `<li><small class="badge bg-primary me-1">${subject}</small></li>`;
+                });
+                if (analysis.subjects.length > 5) {
+                    html += `<li><small class="text-muted">+${analysis.subjects.length - 5} more...</small></li>`;
+                }
+                html += '</ul></div>';
+            }
+            
+            // Faculty found
+            if (analysis.faculty && analysis.faculty.length > 0) {
+                html += `<div class="col-md-6">
+                    <strong>Faculty Found (${analysis.faculty.length}):</strong>
+                    <ul class="list-unstyled mt-1">`;
+                analysis.faculty.slice(0, 3).forEach(faculty => {
+                    html += `<li><small class="badge bg-success me-1">${faculty}</small></li>`;
+                });
+                if (analysis.faculty.length > 3) {
+                    html += `<li><small class="text-muted">+${analysis.faculty.length - 3} more...</small></li>`;
+                }
+                html += '</ul></div>';
+            }
+            
+            html += '</div>';
+            
+            // Structure info
+            if (analysis.structure_type) {
+                html += `<div class="mt-2">
+                    <strong>Structure Type:</strong> 
+                    <span class="badge bg-info">${analysis.structure_type.replace('_', ' ')}</span>
+                </div>`;
+            }
+            
+            content.innerHTML = html;
+            document.getElementById('analysisResult').style.display = 'block';
+        }
+
+        function autoPopulateFromAnalysis(analysis) {
+            // Auto-populate institution name if found in metadata
+            for (const [key, value] of Object.entries(analysis.metadata || {})) {
+                if (key.toLowerCase().includes('institution') || value.toLowerCase().includes('institute')) {
+                    document.getElementById('institutionName').value = value;
+                    break;
+                }
+            }
+            
+            // Auto-populate department if found
+            for (const [key, value] of Object.entries(analysis.metadata || {})) {
+                if (key.toLowerCase().includes('department') || value.toLowerCase().includes('dept')) {
+                    document.getElementById('department').value = value;
+                    break;
+                }
+            }
+        }
+
+        function nextStep(step) {
+            console.log(`Moving to step ${step}`);
+            if (validateCurrentStep()) {
+                currentStep = step;
+                showStep(step);
+                updateProgress();
+            }
+        }
+
+        function prevStep(step) {
+            console.log(`Moving back to step ${step}`);
+            currentStep = step;
+            showStep(step);
+            updateProgress();
+        }
+
+        function showStep(step) {
+            // Hide all steps
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            
+            // Show current step
+            document.getElementById(`step${step}`).classList.add('active');
+        }
+
+        function updateProgress() {
+            const progress = (currentStep / 4) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+        }
+
+        function validateCurrentStep() {
+            if (currentStep === 1) {
+                // Validate basic configuration
+                const required = ['institutionName', 'department', 'academicYear', 'year', 'semester', 'startDate', 'endDate'];
+                for (const field of required) {
+                    const element = document.getElementById(field);
+                    if (!element || !element.value) {
+                        alert(`Please fill in the ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+                        return false;
+                    }
+                }
+                
+                // Check working days
+                const workingDays = getWorkingDays();
+                if (workingDays.length === 0) {
+                    alert('Please select at least one working day');
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        function getWorkingDays() {
+            const days = [];
+            ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].forEach(day => {
+                const element = document.getElementById(day);
+                if (element && element.checked) {
+                    days.push(element.value);
+                }
+            });
+            return days;
+        }
+
+        function getRequirements() {
+            return {
+                periods_per_day: parseInt(document.getElementById('periodsPerDay').value) || 8,
+                theory_sessions_per_week: parseInt(document.getElementById('theorySessionsPerWeek').value) || 20,
+                lab_sessions_per_week: parseInt(document.getElementById('labSessionsPerWeek').value) || 6,
+                elective_sessions_per_week: parseInt(document.getElementById('electiveSessionsPerWeek').value) || 4,
+                additional_requirements: document.getElementById('additionalRequirements').value || ''
+            };
+        }
+
+        function getConstraints() {
+            return {
+                break_duration: parseInt(document.getElementById('breakDuration').value) || 15,
+                lunch_break_duration: parseInt(document.getElementById('lunchBreakDuration').value) || 60,
+                lab_duration: parseInt(document.getElementById('labDuration').value) || 3,
+                max_consecutive_classes: parseInt(document.getElementById('maxConsecutive').value) || 3
+            };
+        }
+
+        async function generateTimetable() {
+            console.log('Generating timetable...');
+            
+            // Show loading
+            document.getElementById('generateContent').style.display = 'none';
+            document.getElementById('generatingContent').style.display = 'block';
+            
+            try {
+                const requestData = {
+                    institution_name: document.getElementById('institutionName').value,
+                    department: document.getElementById('department').value,
+                    year: parseInt(document.getElementById('year').value),
+                    semester: document.getElementById('semester').value,
+                    academic_year: document.getElementById('academicYear').value,
+                    start_date: document.getElementById('startDate').value,
+                    end_date: document.getElementById('endDate').value,
+                    working_days: getWorkingDays(),
+                    requirements: getRequirements(),
+                    constraints: getConstraints()
+                };
+                
+                console.log('Request data:', requestData);
+                
+                // Create form data
+                const formData = new FormData();
+                
+                // Add all request data as JSON strings for complex objects
+                Object.keys(requestData).forEach(key => {
+                    if (typeof requestData[key] === 'object') {
+                        formData.append(key, JSON.stringify(requestData[key]));
+                    } else {
+                        formData.append(key, requestData[key]);
+                    }
+                });
+                
+                // Add reference file if uploaded
+                if (uploadedFile) {
+                    formData.append('reference_file', uploadedFile);
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/generate-dynamic-timetable`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                console.log('Response:', result);
+                
+                if (result.success) {
+                    displayTimetable(result.timetable);
+                    nextStep(4);
+                } else {
+                    alert('Error generating timetable: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error generating timetable:', error);
+                alert('Error generating timetable. Please check your connection and try again.');
+            } finally {
+                // Hide loading
+                document.getElementById('generateContent').style.display = 'block';
+                document.getElementById('generatingContent').style.display = 'none';
+            }
+        }
+
+        function displayTimetable(timetableData) {
+            const container = document.getElementById('timetableContent');
+            
+            if (!timetableData) {
+                container.innerHTML = '<div class="alert alert-warning">No timetable data received.</div>';
+                return;
+            }
+            
+            if (timetableData.raw_response) {
+                container.innerHTML = `<div class="alert alert-info">
+                    <h6>AI Response:</h6>
+                    <pre style="white-space: pre-wrap; max-height: 500px; overflow-y: auto;">${timetableData.raw_response}</pre>
+                </div>`;
+                return;
+            }
+            
+            if (timetableData.timetable) {
+                let html = '<div class="timetable-container">';
+                html += '<table class="table table-bordered table-striped table-hover">';
+                
+                // Create header
+                html += '<thead class="table-dark"><tr><th class="text-center">Day/Time</th>';
+                const firstDay = Object.keys(timetableData.timetable)[0];
+                if (firstDay && timetableData.timetable[firstDay]) {
+                    Object.keys(timetableData.timetable[firstDay]).forEach(period => {
+                        html += `<th class="text-center">${period.replace('_', ' ')}</th>`;
+                    });
+                }
+                html += '</tr></thead><tbody>';
+                
+                // Create rows
+                Object.entries(timetableData.timetable).forEach(([day, periods]) => {
+                    html += `<tr><td class="fw-bold bg-light text-center">${day}</td>`;
+                    Object.entries(periods).forEach(([period, details]) => {
+                        html += '<td class="text-center">';
+                        if (details && typeof details === 'object') {
+                            html += `<div class="p-2">
+                                <strong class="text-primary">${details.subject_code || details.subject || ''}</strong><br>
+                                <small class="text-muted">${details.time || ''}</small><br>
+                                <small>${details.faculty || ''}</small>
+                                ${details.room ? `<br><small class="badge bg-secondary">${details.room}</small>` : ''}
+                                ${details.type ? `<br><small class="badge bg-info">${details.type}</small>` : ''}
+                            </div>`;
+                        } else if (details) {
+                            html += `<small>${details}</small>`;
+                        }
+                        html += '</td>';
+                    });
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table></div>';
+                
+                // Add summary if available
+                if (timetableData.summary) {
+                    html += '<div class="row mt-4">';
+                    html += '<div class="col-md-6">';
+                    html += '<h6>Summary:</h6>';
+                    html += '<ul class="list-unstyled">';
+                    Object.entries(timetableData.summary).forEach(([key, value]) => {
+                        html += `<li><strong>${key.replace('_', ' ')}:</strong> ${JSON.stringify(value)}</li>`;
+                    });
+                    html += '</ul></div>';
+                    
+                    if (timetableData.recommendations && timetableData.recommendations.length > 0) {
+                        html += '<div class="col-md-6">';
+                        html += '<h6>Recommendations:</h6>';
+                        html += '<ul>';
+                        timetableData.recommendations.forEach(rec => {
+                            html += `<li>${rec}</li>`;
+                        });
+                        html += '</ul></div>';
+                    }
+                    html += '</div>';
+                }
+                
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div class="alert alert-warning">Unexpected timetable format received.</div>';
+            }
+        }
+
+        function clearFile() {
+            uploadedFile = null;
+            analysisData = null;
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('analysisResult').style.display = 'none';
+            document.getElementById('csvFile').value = '';
+        }
+
+        function exportTimetable() {
+            const content = document.getElementById('timetableContent').innerHTML;
+            const institutionName = document.getElementById('institutionName').value;
+            const department = document.getElementById('department').value;
+            
+            const newWindow = window.open('', '_blank');
+            newWindow.document.write(`
+                <html>
+                <head>
+                    <title>Timetable - ${institutionName} - ${department}</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.min.css" rel="stylesheet">
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .header { text-align: center; margin-bottom: 2rem; }
+                        table { font-size: 12px; width: 100%; }
+                        th, td { padding: 8px; border: 1px solid #ddd; }
+                        @media print {
+                             .no-print { display: none; }
+                            body { margin: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h2>${institutionName}</h2>
+                        <h4>Department of ${department}</h4>
+                        <p>Academic Year: ${document.getElementById('academicYear').value}</p>
+                        <p>Generated on: ${new Date().toLocaleDateString()}</p>
+                    </div>
+                    ${content}
+                    <div class="no-print mt-4 text-center">
+                        <button onclick="window.print()" class="btn btn-primary">Print</button>
+                        <button onclick="window.close()" class="btn btn-secondary">Close</button>
+                    </div>
+                </body>
+                </html>
+            `);
+            newWindow.document.close();
+        }
+
+        function startOver() {
+            if (confirm('Are you sure you want to start over? All current data will be lost.')) {
+                location.reload();
+            }
+        }
+
+        // Handler functions that call the main functions
+        function handleNextStep(step) {
+            console.log('handleNextStep called with step:', step);
+            nextStep(step);
+        }
+
+        function handlePrevStep(step) {
+            console.log('handlePrevStep called with step:', step);
+            prevStep(step);
+        }
+
+        function handleGenerateTimetable() {
+            console.log('handleGenerateTimetable called');
+            generateTimetable();
+        }
+
+        function handleExportTimetable() {
+            exportTimetable();
+        }
+
+        function handleStartOver() {
+            startOver();
+        }
+
+        function handleClearFile() {
+            clearFile();
+        }
+
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript Error:', e.error);
+            showDebug('JavaScript Error: ' + e.error);
+        });
+
+        function showDebug(message) {
+            document.getElementById('debugText').textContent = message;
+            document.getElementById('debugInfo').style.display = 'block';
+        }
+
+        console.log('Script loaded successfully');
+    </script>
+</body>
+</html>
