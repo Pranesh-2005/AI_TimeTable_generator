@@ -775,496 +775,606 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.bundle.min.js"></script>
     <!-- Main Application Script -->
     <script>
-        console.log('Loading main app script...');
-        // Global variables
-        const API_BASE_URL = 'http://127.0.0.1:8000';
-        let uploadedFile = null;
-        let analysisData = null;
-        let currentStep = 1;
+console.log('Loading main app script...');
 
-        // Initialize app when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing app...');
-            initializeApp();
+// Global variables
+const API_BASE_URL = 'https://ai-timetable-generator.onrender.com';
+let uploadedFile = null;
+let analysisData = null;
+let currentStep = 1;
+
+// Initialize app when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing app...');
+    initializeApp();
+});
+
+function initializeApp() {
+    console.log('App initialized');
+    
+    // Set default dates
+    const today = new Date();
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    
+    document.getElementById('startDate').value = today.toISOString().split('T')[0];
+    document.getElementById('endDate').value = nextMonth.toISOString().split('T')[0];
+    
+    // Setup file upload
+    setupFileUpload();
+}
+
+function setupFileUpload() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('csvFile');
+    
+    // Click to upload
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    // Drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUpload(files[0]);
+        }
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileUpload(e.target.files[0]);
+        }
+    });
+}
+
+async function handleFileUpload(file) {
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Please upload a CSV file');
+        return;
+    }
+    
+    uploadedFile = file;
+    
+    // Show file info
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileInfo').style.display = 'block';
+    
+    // Analyze file
+    await analyzeUploadedFile(file);
+}
+
+async function analyzeUploadedFile(file) {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`${API_BASE_URL}/analyze-csv`, {
+            method: 'POST',
+            body: formData
         });
-
-        function initializeApp() {
-            console.log('App initialized');
-            
-            // Set default dates
-            const today = new Date();
-            const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
-            
-            document.getElementById('startDate').value = today.toISOString().split('T')[0];
-            document.getElementById('endDate').value = nextMonth.toISOString().split('T')[0];
-            
-            // Setup file upload
-            setupFileUpload();
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            analysisData = result.analysis;
+            displayAnalysisResults(result.analysis);
+            autoPopulateFromAnalysis(result.analysis);
+        } else {
+            alert('Error analyzing file: ' + result.message);
         }
+    } catch (error) {
+        console.error('Error analyzing file:', error);
+        alert('Error analyzing file. Please try again.');
+    }
+}
 
-        function setupFileUpload() {
-            const uploadArea = document.getElementById('uploadArea');
-            const fileInput = document.getElementById('csvFile');
-            
-            // Click to upload
-            uploadArea.addEventListener('click', () => fileInput.click());
-            
-            // Drag and drop
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    handleFileUpload(files[0]);
-                }
-            });
-            
-            // File input change
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleFileUpload(e.target.files[0]);
-                }
-            });
+function displayAnalysisResults(analysis) {
+    const content = document.getElementById('analysisContent');
+    
+    let html = '<div class="row">';
+    
+    // Subjects found
+    if (analysis.subjects && analysis.subjects.length > 0) {
+        html += `<div class="col-md-6">
+            <strong>Subjects Found (${analysis.subjects.length}):</strong>
+            <ul class="list-unstyled mt-1">`;
+        analysis.subjects.slice(0, 5).forEach(subject => {
+            html += `<li><small class="badge bg-primary me-1">${subject}</small></li>`;
+        });
+        if (analysis.subjects.length > 5) {
+            html += `<li><small class="text-muted">+${analysis.subjects.length - 5} more...</small></li>`;
         }
+        html += '</ul></div>';
+    }
+    
+    // Faculty found
+    if (analysis.faculty && analysis.faculty.length > 0) {
+        html += `<div class="col-md-6">
+            <strong>Faculty Found (${analysis.faculty.length}):</strong>
+            <ul class="list-unstyled mt-1">`;
+        analysis.faculty.slice(0, 3).forEach(faculty => {
+            html += `<li><small class="badge bg-success me-1">${faculty}</small></li>`;
+        });
+        if (analysis.faculty.length > 3) {
+            html += `<li><small class="text-muted">+${analysis.faculty.length - 3} more...</small></li>`;
+        }
+        html += '</ul></div>';
+    }
+    
+    html += '</div>';
+    
+    // Structure info
+    if (analysis.structure_type) {
+        html += `<div class="mt-2">
+            <strong>Structure Type:</strong> 
+            <span class="badge bg-info">${analysis.structure_type.replace('_', ' ')}</span>
+        </div>`;
+    }
+    
+    content.innerHTML = html;
+    document.getElementById('analysisResult').style.display = 'block';
+}
 
-        async function handleFileUpload(file) {
-            if (!file.name.toLowerCase().endsWith('.csv')) {
-                alert('Please upload a CSV file');
-                return;
+function autoPopulateFromAnalysis(analysis) {
+    // Auto-populate institution name if found in metadata
+    for (const [key, value] of Object.entries(analysis.metadata || {})) {
+        if (key.toLowerCase().includes('institution') || value.toLowerCase().includes('institute')) {
+            document.getElementById('institutionName').value = value;
+            break;
+        }
+    }
+    
+    // Auto-populate department if found
+    for (const [key, value] of Object.entries(analysis.metadata || {})) {
+        if (key.toLowerCase().includes('department') || value.toLowerCase().includes('dept')) {
+            document.getElementById('department').value = value;
+            break;
+        }
+    }
+}
+
+function nextStep(step) {
+    console.log(`Moving to step ${step}`);
+    if (validateCurrentStep()) {
+        currentStep = step;
+        showStep(step);
+        updateProgress();
+    }
+}
+
+function prevStep(step) {
+    console.log(`Moving back to step ${step}`);
+    currentStep = step;
+    showStep(step);
+    updateProgress();
+}
+
+function showStep(step) {
+    // Hide all steps
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    
+    // Show current step
+    document.getElementById(`step${step}`).classList.add('active');
+}
+
+function updateProgress() {
+    const progress = (currentStep / 4) * 100;
+    document.getElementById('progressBar').style.width = `${progress}%`;
+}
+
+function validateCurrentStep() {
+    if (currentStep === 1) {
+        // Validate basic configuration
+        const required = ['institutionName', 'department', 'academicYear', 'year', 'semester', 'startDate', 'endDate'];
+        for (const field of required) {
+            const element = document.getElementById(field);
+            if (!element || !element.value) {
+                alert(`Please fill in the ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+                return false;
             }
-            
-            uploadedFile = file;
-            
-            // Show file info
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('fileInfo').style.display = 'block';
-            
-            // Analyze file
-            await analyzeUploadedFile(file);
         }
+        
+        // Check working days
+        const workingDays = getWorkingDays();
+        if (workingDays.length === 0) {
+            alert('Please select at least one working day');
+            return false;
+        }
+    }
+    
+    return true;
+}
 
-        async function analyzeUploadedFile(file) {
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                
-                const response = await fetch(`${API_BASE_URL}/analyze-csv`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    analysisData = result.analysis;
-                    displayAnalysisResults(result.analysis);
-                    autoPopulateFromAnalysis(result.analysis);
+function getWorkingDays() {
+    const days = [];
+    ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].forEach(day => {
+        const element = document.getElementById(day);
+        if (element && element.checked) {
+            days.push(element.value);
+        }
+    });
+    return days;
+}
+
+function getRequirements() {
+    return {
+        periods_per_day: parseInt(document.getElementById('periodsPerDay').value) || 8,
+        theory_sessions_per_week: parseInt(document.getElementById('theorySessionsPerWeek').value) || 20,
+        lab_sessions_per_week: parseInt(document.getElementById('labSessionsPerWeek').value) || 6,
+        elective_sessions_per_week: parseInt(document.getElementById('electiveSessionsPerWeek').value) || 4,
+        additional_requirements: document.getElementById('additionalRequirements').value || ''
+    };
+}
+
+function getConstraints() {
+    return {
+        break_duration: parseInt(document.getElementById('breakDuration').value) || 15,
+        lunch_break_duration: parseInt(document.getElementById('lunchBreakDuration').value) || 60,
+        lab_duration: parseInt(document.getElementById('labDuration').value) || 3,
+        max_consecutive_classes: parseInt(document.getElementById('maxConsecutive').value) || 3
+    };
+}
+
+async function generateTimetable() {
+    console.log('Generating timetable...');
+    
+    // Show loading
+    document.getElementById('generateContent').style.display = 'none';
+    document.getElementById('generatingContent').style.display = 'block';
+    
+    try {
+        const requestData = {
+            institution_name: document.getElementById('institutionName').value,
+            department: document.getElementById('department').value,
+            year: parseInt(document.getElementById('year').value),
+            semester: document.getElementById('semester').value,
+            academic_year: document.getElementById('academicYear').value,
+            start_date: document.getElementById('startDate').value,
+            end_date: document.getElementById('endDate').value,
+            working_days: getWorkingDays(),
+            requirements: getRequirements(),
+            constraints: getConstraints()
+        };
+        
+        console.log('Request data:', requestData);
+        
+        // Create form data
+        const formData = new FormData();
+        
+        // Add all request data as JSON strings for complex objects
+        Object.keys(requestData).forEach(key => {
+            if (typeof requestData[key] === 'object') {
+                formData.append(key, JSON.stringify(requestData[key]));
+            } else {
+                formData.append(key, requestData[key]);
+            }
+        });
+        
+        // Add reference file if uploaded
+        if (uploadedFile) {
+            formData.append('reference_file', uploadedFile);
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/generate-dynamic-timetable`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        console.log('Response:', result);
+        
+        // FIXED: Check for the correct structure that your backend returns
+        if (result.success && result.timetable && typeof result.timetable === 'object') {
+            // Check if it has the timetable data (either nested or direct)
+            const timetableData = result.timetable.timetable || result.timetable;
+            
+            if (timetableData && typeof timetableData === 'object' && Object.keys(timetableData).length > 0) {
+                console.log('✅ Backend returned valid timetable data');
+                displayTimetable(result.timetable);
+                nextStep(4);
+            } else {
+                console.warn('❌ Backend returned success but invalid timetable structure');
+                showDebug('Backend returned invalid timetable structure');
+                alert('Error: Invalid timetable data received from server');
+            }
+        } else {
+            console.error('❌ Backend returned error or no timetable');
+            alert('Error generating timetable: ' + (result.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('❌ API call failed:', error);
+        alert('Error connecting to server. Please try again.');
+    } finally {
+        // Hide loading
+        document.getElementById('generateContent').style.display = 'block';
+        document.getElementById('generatingContent').style.display = 'none';
+    }
+}
+
+function displayTimetable(timetableData) {
+    const container = document.getElementById('timetableContent');
+    
+    console.log('=== DISPLAYING TIMETABLE ===');
+    console.log('Timetable data received:', timetableData);
+    
+    if (!timetableData) {
+        container.innerHTML = '<div class="alert alert-warning">No timetable data received.</div>';
+        return;
+    }
+    
+    // Handle the structure from your backend
+    const timetable = timetableData.timetable || timetableData;
+    const summary = timetableData.summary;
+    const recommendations = timetableData.recommendations;
+    const requestDetails = timetableData.request_details;
+    
+    if (!timetable || typeof timetable !== 'object' || Object.keys(timetable).length === 0) {
+        container.innerHTML = '<div class="alert alert-warning">Invalid timetable format received.</div>';
+        return;
+    }
+    
+    let html = '<div class="timetable-container">';
+    html += '<table class="table table-bordered table-striped table-hover">';
+    
+    // Get all time slots from the first day to create header
+    const firstDay = Object.keys(timetable)[0];
+    const timeSlots = firstDay ? Object.keys(timetable[firstDay]) : [];
+    
+    if (timeSlots.length === 0) {
+        container.innerHTML = '<div class="alert alert-warning">No time slots found in timetable.</div>';
+        return;
+    }
+    
+    // Create header row
+    html += '<thead class="table-dark"><tr>';
+    html += '<th class="text-center" style="min-width: 100px;">Day</th>';
+    
+    timeSlots.forEach(slot => {
+        const slotName = slot.replace(/Period_(\d+)/, 'Period $1').replace(/_/g, ' ');
+        html += `<th class="text-center" style="min-width: 150px;">${slotName}</th>`;
+    });
+    html += '</tr></thead>';
+    
+    // Create body rows
+    html += '<tbody>';
+    Object.entries(timetable).forEach(([day, periods]) => {
+        html += `<tr>`;
+        html += `<td class="fw-bold bg-light text-center align-middle">${day}</td>`;
+        
+        timeSlots.forEach(slot => {
+            const period = periods[slot];
+            html += '<td class="text-center align-middle" style="padding: 8px; min-height: 80px;">';
+            
+            if (period && typeof period === 'object') {
+                if (period.type === 'break' || period.type === 'lunch') {
+                    html += `<div class="p-2 bg-light rounded border">
+                        <strong class="text-secondary d-block">${period.subject}</strong>
+                        <small class="text-muted">${period.time || ''}</small>
+                    </div>`;
+                } else if (period.type === 'free') {
+                    html += `<div class="p-2 bg-light rounded border text-muted">
+                        <small class="d-block">Free Period</small>
+                        <small>${period.time || ''}</small>
+                    </div>`;
                 } else {
-                    alert('Error analyzing file: ' + result.message);
-                }
-            } catch (error) {
-                console.error('Error analyzing file:', error);
-                alert('Error analyzing file. Please try again.');
-            }
-        }
-
-        function displayAnalysisResults(analysis) {
-            const content = document.getElementById('analysisContent');
-            
-            let html = '<div class="row">';
-            
-            // Subjects found
-            if (analysis.subjects && analysis.subjects.length > 0) {
-                html += `<div class="col-md-6">
-                    <strong>Subjects Found (${analysis.subjects.length}):</strong>
-                    <ul class="list-unstyled mt-1">`;
-                analysis.subjects.slice(0, 5).forEach(subject => {
-                    html += `<li><small class="badge bg-primary me-1">${subject}</small></li>`;
-                });
-                if (analysis.subjects.length > 5) {
-                    html += `<li><small class="text-muted">+${analysis.subjects.length - 5} more...</small></li>`;
-                }
-                html += '</ul></div>';
-            }
-            
-            // Faculty found
-            if (analysis.faculty && analysis.faculty.length > 0) {
-                html += `<div class="col-md-6">
-                    <strong>Faculty Found (${analysis.faculty.length}):</strong>
-                    <ul class="list-unstyled mt-1">`;
-                analysis.faculty.slice(0, 3).forEach(faculty => {
-                    html += `<li><small class="badge bg-success me-1">${faculty}</small></li>`;
-                });
-                if (analysis.faculty.length > 3) {
-                    html += `<li><small class="text-muted">+${analysis.faculty.length - 3} more...</small></li>`;
-                }
-                html += '</ul></div>';
-            }
-            
-            html += '</div>';
-            
-            // Structure info
-            if (analysis.structure_type) {
-                html += `<div class="mt-2">
-                    <strong>Structure Type:</strong> 
-                    <span class="badge bg-info">${analysis.structure_type.replace('_', ' ')}</span>
-                </div>`;
-            }
-            
-            content.innerHTML = html;
-            document.getElementById('analysisResult').style.display = 'block';
-        }
-
-        function autoPopulateFromAnalysis(analysis) {
-            // Auto-populate institution name if found in metadata
-            for (const [key, value] of Object.entries(analysis.metadata || {})) {
-                if (key.toLowerCase().includes('institution') || value.toLowerCase().includes('institute')) {
-                    document.getElementById('institutionName').value = value;
-                    break;
-                }
-            }
-            
-            // Auto-populate department if found
-            for (const [key, value] of Object.entries(analysis.metadata || {})) {
-                if (key.toLowerCase().includes('department') || value.toLowerCase().includes('dept')) {
-                    document.getElementById('department').value = value;
-                    break;
-                }
-            }
-        }
-
-        function nextStep(step) {
-            console.log(`Moving to step ${step}`);
-            if (validateCurrentStep()) {
-                currentStep = step;
-                showStep(step);
-                updateProgress();
-            }
-        }
-
-        function prevStep(step) {
-            console.log(`Moving back to step ${step}`);
-            currentStep = step;
-            showStep(step);
-            updateProgress();
-        }
-
-        function showStep(step) {
-            // Hide all steps
-            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-            
-            // Show current step
-            document.getElementById(`step${step}`).classList.add('active');
-        }
-
-        function updateProgress() {
-            const progress = (currentStep / 4) * 100;
-            document.getElementById('progressBar').style.width = `${progress}%`;
-        }
-
-        function validateCurrentStep() {
-            if (currentStep === 1) {
-                // Validate basic configuration
-                const required = ['institutionName', 'department', 'academicYear', 'year', 'semester', 'startDate', 'endDate'];
-                for (const field of required) {
-                    const element = document.getElementById(field);
-                    if (!element || !element.value) {
-                        alert(`Please fill in the ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-                        return false;
-                    }
-                }
-                
-                // Check working days
-                const workingDays = getWorkingDays();
-                if (workingDays.length === 0) {
-                    alert('Please select at least one working day');
-                    return false;
-                }
-            }
-            
-            return true;
-        }
-
-        function getWorkingDays() {
-            const days = [];
-            ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].forEach(day => {
-                const element = document.getElementById(day);
-                if (element && element.checked) {
-                    days.push(element.value);
-                }
-            });
-            return days;
-        }
-
-        function getRequirements() {
-            return {
-                periods_per_day: parseInt(document.getElementById('periodsPerDay').value) || 8,
-                theory_sessions_per_week: parseInt(document.getElementById('theorySessionsPerWeek').value) || 20,
-                lab_sessions_per_week: parseInt(document.getElementById('labSessionsPerWeek').value) || 6,
-                elective_sessions_per_week: parseInt(document.getElementById('electiveSessionsPerWeek').value) || 4,
-                additional_requirements: document.getElementById('additionalRequirements').value || ''
-            };
-        }
-
-        function getConstraints() {
-            return {
-                break_duration: parseInt(document.getElementById('breakDuration').value) || 15,
-                lunch_break_duration: parseInt(document.getElementById('lunchBreakDuration').value) || 60,
-                lab_duration: parseInt(document.getElementById('labDuration').value) || 3,
-                max_consecutive_classes: parseInt(document.getElementById('maxConsecutive').value) || 3
-            };
-        }
-
-        async function generateTimetable() {
-            console.log('Generating timetable...');
-            
-            // Show loading
-            document.getElementById('generateContent').style.display = 'none';
-            document.getElementById('generatingContent').style.display = 'block';
-            
-            try {
-                const requestData = {
-                    institution_name: document.getElementById('institutionName').value,
-                    department: document.getElementById('department').value,
-                    year: parseInt(document.getElementById('year').value),
-                    semester: document.getElementById('semester').value,
-                    academic_year: document.getElementById('academicYear').value,
-                    start_date: document.getElementById('startDate').value,
-                    end_date: document.getElementById('endDate').value,
-                    working_days: getWorkingDays(),
-                    requirements: getRequirements(),
-                    constraints: getConstraints()
-                };
-                
-                console.log('Request data:', requestData);
-                
-                // Create form data
-                const formData = new FormData();
-                
-                // Add all request data as JSON strings for complex objects
-                Object.keys(requestData).forEach(key => {
-                    if (typeof requestData[key] === 'object') {
-                        formData.append(key, JSON.stringify(requestData[key]));
-                    } else {
-                        formData.append(key, requestData[key]);
-                    }
-                });
-                
-                // Add reference file if uploaded
-                if (uploadedFile) {
-                    formData.append('reference_file', uploadedFile);
-                }
-                
-                const response = await fetch(`${API_BASE_URL}/generate-dynamic-timetable`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                console.log('Response:', result);
-                
-                if (result.success) {
-                    displayTimetable(result.timetable);
-                    nextStep(4);
-                } else {
-                    alert('Error generating timetable: ' + result.message);
-                }
-            } catch (error) {
-                console.error('Error generating timetable:', error);
-                alert('Error generating timetable. Please check your connection and try again.');
-            } finally {
-                // Hide loading
-                document.getElementById('generateContent').style.display = 'block';
-                document.getElementById('generatingContent').style.display = 'none';
-            }
-        }
-
-        function displayTimetable(timetableData) {
-            const container = document.getElementById('timetableContent');
-            
-            if (!timetableData) {
-                container.innerHTML = '<div class="alert alert-warning">No timetable data received.</div>';
-                return;
-            }
-            
-            if (timetableData.raw_response) {
-                container.innerHTML = `<div class="alert alert-info">
-                    <h6>AI Response:</h6>
-                    <pre style="white-space: pre-wrap; max-height: 500px; overflow-y: auto;">${timetableData.raw_response}</pre>
-                </div>`;
-                return;
-            }
-            
-            if (timetableData.timetable) {
-                let html = '<div class="timetable-container">';
-                html += '<table class="table table-bordered table-striped table-hover">';
-                
-                // Create header
-                html += '<thead class="table-dark"><tr><th class="text-center">Day/Time</th>';
-                const firstDay = Object.keys(timetableData.timetable)[0];
-                if (firstDay && timetableData.timetable[firstDay]) {
-                    Object.keys(timetableData.timetable[firstDay]).forEach(period => {
-                        html += `<th class="text-center">${period.replace('_', ' ')}</th>`;
-                    });
-                }
-                html += '</tr></thead><tbody>';
-                
-                // Create rows
-                Object.entries(timetableData.timetable).forEach(([day, periods]) => {
-                    html += `<tr><td class="fw-bold bg-light text-center">${day}</td>`;
-                    Object.entries(periods).forEach(([period, details]) => {
-                        html += '<td class="text-center">';
-                        if (details && typeof details === 'object') {
-                            html += `<div class="p-2">
-                                <strong class="text-primary">${details.subject_code || details.subject || ''}</strong><br>
-                                <small class="text-muted">${details.time || ''}</small><br>
-                                <small>${details.faculty || ''}</small>
-                                ${details.room ? `<br><small class="badge bg-secondary">${details.room}</small>` : ''}
-                                ${details.type ? `<br><small class="badge bg-info">${details.type}</small>` : ''}
-                            </div>`;
-                        } else if (details) {
-                            html += `<small>${details}</small>`;
-                        }
-                        html += '</td>';
-                    });
-                    html += '</tr>';
-                });
-                
-                html += '</tbody></table></div>';
-                
-                // Add summary if available
-                if (timetableData.summary) {
-                    html += '<div class="row mt-4">';
-                    html += '<div class="col-md-6">';
-                    html += '<h6>Summary:</h6>';
-                    html += '<ul class="list-unstyled">';
-                    Object.entries(timetableData.summary).forEach(([key, value]) => {
-                        html += `<li><strong>${key.replace('_', ' ')}:</strong> ${JSON.stringify(value)}</li>`;
-                    });
-                    html += '</ul></div>';
+                    // Regular class period
+                    const subjectCode = period.subject_code || '';
+                    const subjectName = period.subject || '';
+                    const faculty = period.faculty || '';
+                    const room = period.room || '';
+                    const type = period.type || '';
+                    const time = period.time || '';
+                    const duration = period.duration || '';
                     
-                    if (timetableData.recommendations && timetableData.recommendations.length > 0) {
-                        html += '<div class="col-md-6">';
-                        html += '<h6>Recommendations:</h6>';
-                        html += '<ul>';
-                        timetableData.recommendations.forEach(rec => {
-                            html += `<li>${rec}</li>`;
-                        });
-                        html += '</ul></div>';
+                    html += `<div class="p-2 border rounded" style="background: #f8f9fa;">`;
+                    
+                    if (subjectCode) {
+                        html += `<strong class="text-primary d-block" style="font-size: 0.9rem;">${subjectCode}</strong>`;
                     }
+                    
+                    if (subjectName && subjectName !== subjectCode) {
+                        html += `<small class="text-dark d-block" style="font-size: 0.8rem;">${subjectName}</small>`;
+                    }
+                    
+                    if (time) {
+                        html += `<small class="text-muted d-block" style="font-size: 0.75rem;">${time}</small>`;
+                    }
+                    
+                    if (faculty) {
+                        html += `<small class="text-success d-block" style="font-size: 0.75rem;">${faculty}</small>`;
+                    }
+                    
+                    if (room || type || duration) {
+                        html += '<div class="mt-1">';
+                        if (room) {
+                            html += `<span class="badge bg-secondary me-1" style="font-size: 0.6rem;">${room}</span>`;
+                        }
+                        if (type) {
+                            html += `<span class="badge bg-info me-1" style="font-size: 0.6rem;">${type}</span>`;
+                        }
+                        if (duration) {
+                            html += `<br><small class="text-muted" style="font-size: 0.6rem;">${duration}</small>`;
+                        }
+                        html += '</div>';
+                    }
+                    
                     html += '</div>';
                 }
-                
-                container.innerHTML = html;
+            } else if (period && typeof period === 'string') {
+                html += `<small class="text-muted">${period}</small>`;
             } else {
-                container.innerHTML = '<div class="alert alert-warning">Unexpected timetable format received.</div>';
+                html += '<small class="text-muted">-</small>';
             }
-        }
-
-        function clearFile() {
-            uploadedFile = null;
-            analysisData = null;
-            document.getElementById('fileInfo').style.display = 'none';
-            document.getElementById('analysisResult').style.display = 'none';
-            document.getElementById('csvFile').value = '';
-        }
-
-        function exportTimetable() {
-            const content = document.getElementById('timetableContent').innerHTML;
-            const institutionName = document.getElementById('institutionName').value;
-            const department = document.getElementById('department').value;
             
-            const newWindow = window.open('', '_blank');
-            newWindow.document.write(`
-                <html>
-                <head>
-                    <title>Timetable - ${institutionName} - ${department}</title>
-                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.min.css" rel="stylesheet">
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        .header { text-align: center; margin-bottom: 2rem; }
-                        table { font-size: 12px; width: 100%; }
-                        th, td { padding: 8px; border: 1px solid #ddd; }
-                        @media print {
-                             .no-print { display: none; }
-                            body { margin: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h2>${institutionName}</h2>
-                        <h4>Department of ${department}</h4>
-                        <p>Academic Year: ${document.getElementById('academicYear').value}</p>
-                        <p>Generated on: ${new Date().toLocaleDateString()}</p>
-                    </div>
-                    ${content}
-                    <div class="no-print mt-4 text-center">
-                        <button onclick="window.print()" class="btn btn-primary">Print</button>
-                        <button onclick="window.close()" class="btn btn-secondary">Close</button>
-                    </div>
-                </body>
-                </html>
-            `);
-            newWindow.document.close();
-        }
-
-        function startOver() {
-            if (confirm('Are you sure you want to start over? All current data will be lost.')) {
-                location.reload();
-            }
-        }
-
-        // Handler functions that call the main functions
-        function handleNextStep(step) {
-            console.log('handleNextStep called with step:', step);
-            nextStep(step);
-        }
-
-        function handlePrevStep(step) {
-            console.log('handlePrevStep called with step:', step);
-            prevStep(step);
-        }
-
-        function handleGenerateTimetable() {
-            console.log('handleGenerateTimetable called');
-            generateTimetable();
-        }
-
-        function handleExportTimetable() {
-            exportTimetable();
-        }
-
-        function handleStartOver() {
-            startOver();
-        }
-
-        function handleClearFile() {
-            clearFile();
-        }
-
-        // Global error handler
-        window.addEventListener('error', function(e) {
-            console.error('JavaScript Error:', e.error);
-            showDebug('JavaScript Error: ' + e.error);
+            html += '</td>';
         });
-
-        function showDebug(message) {
-            document.getElementById('debugText').textContent = message;
-            document.getElementById('debugInfo').style.display = 'block';
+        html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    
+    // Add summary section
+    if (summary) {
+        html += '<div class="row mt-4">';
+        html += '<div class="col-md-6">';
+        html += '<div class="card">';
+        html += '<div class="card-header"><h6><i class="fas fa-chart-bar me-2"></i>Timetable Summary</h6></div>';
+        html += '<div class="card-body">';
+        html += '<div class="row">';
+        
+        Object.entries(summary).forEach(([key, value]) => {
+            const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            html += `<div class="col-12 mb-2">
+                <strong class="text-primary">${displayKey}:</strong> 
+                <span class="text-dark">${value}</span>
+            </div>`;
+        });
+        
+        html += '</div></div></div></div>';
+        
+        // Add recommendations
+        if (recommendations && recommendations.length > 0) {
+            html += '<div class="col-md-6">';
+            html += '<div class="card">';
+            html += '<div class="card-header"><h6><i class="fas fa-lightbulb me-2"></i>Recommendations</h6></div>';
+            html += '<div class="card-body">';
+            html += '<ul class="mb-0">';
+            recommendations.forEach(rec => {
+                html += `<li class="mb-2 text-muted">${rec}</li>`;
+            });
+            html += '</ul></div></div></div>';
         }
+        
+        html += '</div>';
+    }
+    
+    // Add request details if available
+    if (requestDetails) {
+        html += '<div class="mt-3">';
+        html += '<div class="card">';
+        html += '<div class="card-header"><h6><i class="fas fa-info-circle me-2"></i>Generation Details</h6></div>';
+        html += '<div class="card-body">';
+        html += '<div class="row">';
+        
+        Object.entries(requestDetails).forEach(([key, value]) => {
+            const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            html += `<div class="col-md-4 mb-2">
+                <strong class="text-primary">${displayKey}:</strong><br>
+                <span class="text-muted">${value}</span>
+            </div>`;
+        });
+        
+        html += '</div></div></div></div>';
+    }
+    
+    container.innerHTML = html;
+    console.log('✅ Timetable displayed successfully');
+}
 
-        console.log('Script loaded successfully');
+function clearFile() {
+    uploadedFile = null;
+    analysisData = null;
+    document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('analysisResult').style.display = 'none';
+    document.getElementById('csvFile').value = '';
+}
+
+function exportTimetable() {
+    const content = document.getElementById('timetableContent').innerHTML;
+    const institutionName = document.getElementById('institutionName').value;
+    const department = document.getElementById('department').value;
+    
+    const newWindow = window.open('', '_blank');
+    newWindow.document.write(`
+        <html>
+        <head>
+            <title>Timetable - ${institutionName} - ${department}</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.min.css" rel="stylesheet">
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { text-align: center; margin-bottom: 2rem; }
+                table { font-size: 12px; width: 100%; }
+                th, td { padding: 8px; border: 1px solid #ddd; }
+                @media print {
+                     .no-print { display: none; }
+                    body { margin: 0; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>${institutionName}</h2>
+                <h4>Department of ${department}</h4>
+                <p>Academic Year: ${document.getElementById('academicYear').value}</p>
+                <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            </div>
+            ${content}
+            <div class="no-print mt-4 text-center">
+                <button onclick="window.print()" class="btn btn-primary">Print</button>
+                <button onclick="window.close()" class="btn btn-secondary">Close</button>
+            </div>
+        </body>
+        </html>
+    `);
+    newWindow.document.close();
+}
+
+function startOver() {
+    if (confirm('Are you sure you want to start over? All current data will be lost.')) {
+        location.reload();
+    }
+}
+
+// Handler functions that call the main functions
+function handleNextStep(step) {
+    console.log('handleNextStep called with step:', step);
+    nextStep(step);
+}
+
+function handlePrevStep(step) {
+    console.log('handlePrevStep called with step:', step);
+    prevStep(step);
+}
+
+function handleGenerateTimetable() {
+    console.log('handleGenerateTimetable called');
+    generateTimetable();
+}
+
+function handleExportTimetable() {
+    exportTimetable();
+}
+
+function handleStartOver() {
+    startOver();
+}
+
+function handleClearFile() {
+    clearFile();
+}
+
+// Global error handler
+window.addEventListener('error', function(e) {
+    console.error('JavaScript Error:', e.error);
+    showDebug('JavaScript Error: ' + e.error);
+});
+
+function showDebug(message) {
+    document.getElementById('debugText').textContent = message;
+    document.getElementById('debugInfo').style.display = 'block';
+}
+
+console.log('Script loaded successfully');
     </script>
 </body>
 </html>
