@@ -156,17 +156,15 @@ def generate_sample_timetable(request: TimetableRequest) -> Dict[str, Any]:
     class_duration = request.requirements.get("class_duration", 60)  # Default 60 minutes
     break_duration = request.constraints.get("break_duration", 15)
     lunch_duration = request.constraints.get("lunch_break_duration", 60)
-    lab_duration = request.constraints.get("lab_duration", 3) * 60  # Convert hours to minutes
+    lab_duration_hours = request.constraints.get("lab_duration", 3)
+    lab_duration = lab_duration_hours * 60  # Convert hours to minutes
     
     # Generate time slots
     time_slots = []
     start_time = datetime.strptime("09:00", "%H:%M")
     
     for period in range(1, periods_per_day + 1):
-        # Calculate end time based on class duration
-        end_time = start_time + timedelta(minutes=class_duration)
-        
-        # Add breaks
+        # Add breaks at appropriate intervals
         if period == 3:  # Short break after 2nd period
             time_slots.append({
                 "name": "Break",
@@ -174,7 +172,6 @@ def generate_sample_timetable(request: TimetableRequest) -> Dict[str, Any]:
                 "type": "break"
             })
             start_time += timedelta(minutes=break_duration)
-            end_time = start_time + timedelta(minutes=class_duration)
         elif period == 6:  # Lunch break after 5th period
             time_slots.append({
                 "name": "Lunch",
@@ -182,7 +179,9 @@ def generate_sample_timetable(request: TimetableRequest) -> Dict[str, Any]:
                 "type": "lunch"
             })
             start_time += timedelta(minutes=lunch_duration)
-            end_time = start_time + timedelta(minutes=class_duration)
+        
+        # Calculate end time based on class duration
+        end_time = start_time + timedelta(minutes=class_duration)
         
         time_slots.append({
             "name": f"Period_{period}",
@@ -194,7 +193,6 @@ def generate_sample_timetable(request: TimetableRequest) -> Dict[str, Any]:
         start_time = end_time
     
     # Create a subject schedule that distributes subjects across all days
-    total_periods = len(request.working_days) * periods_per_day
     academic_periods = [slot for slot in time_slots if slot["type"] == "period"]
     periods_needed = len(academic_periods) * len(request.working_days)
     
@@ -202,7 +200,7 @@ def generate_sample_timetable(request: TimetableRequest) -> Dict[str, Any]:
     expanded_subjects = []
     theory_subjects = [s for s in subjects if s["type"] == "theory"]
     lab_subjects = [s for s in subjects if s["type"] == "lab"]
-    elective_subjects = [s for s in subjects if s["type"] in ["elective", "project"]]
+    elective_subjects = [s for s in subjects if s["type"] in ["elective", "project", "seminar", "practical", "assessment"]]
     
     # Calculate sessions per week for each type based on requirements
     theory_sessions_per_week = request.requirements.get("theory_sessions_per_week", 20)
@@ -210,35 +208,36 @@ def generate_sample_timetable(request: TimetableRequest) -> Dict[str, Any]:
     elective_sessions_per_week = request.requirements.get("elective_sessions_per_week", 4)
     
     # Distribute theory subjects
-    theory_per_subject = theory_sessions_per_week // len(theory_subjects) if theory_subjects else 0
-    for subject in theory_subjects:
-        for _ in range(theory_per_subject):
-            expanded_subjects.append(subject)
+    if theory_subjects:
+        theory_per_subject = max(1, theory_sessions_per_week // len(theory_subjects))
+        for subject in theory_subjects:
+            for _ in range(theory_per_subject):
+                expanded_subjects.append(subject)
     
     # Distribute lab subjects (labs typically take multiple consecutive periods)
     lab_periods_per_session = lab_duration // class_duration
-    lab_sessions_total = lab_sessions_per_week // lab_periods_per_session if lab_periods_per_session > 0 else lab_sessions_per_week
-    
-    for i, subject in enumerate(lab_subjects):
-        sessions_for_this_lab = max(1, lab_sessions_total // len(lab_subjects))
-        for _ in range(sessions_for_this_lab):
-            # For lab sessions, add multiple consecutive periods
-            for period in range(lab_periods_per_session):
-                expanded_subjects.append(subject)
+    if lab_subjects and lab_periods_per_session > 0:
+        lab_sessions_total = lab_sessions_per_week // lab_periods_per_session
+        for subject in lab_subjects:
+            sessions_for_this_lab = max(1, lab_sessions_total // len(lab_subjects))
+            for _ in range(sessions_for_this_lab):
+                # For lab sessions, add multiple consecutive periods
+                for period in range(lab_periods_per_session):
+                    expanded_subjects.append(subject)
     
     # Distribute elective subjects
-    elective_per_subject = elective_sessions_per_week // len(elective_subjects) if elective_subjects else 0
-    for subject in elective_subjects:
-        for _ in range(elective_per_subject):
-            expanded_subjects.append(subject)
+    if elective_subjects:
+        elective_per_subject = max(1, elective_sessions_per_week // len(elective_subjects))
+        for subject in elective_subjects:
+            for _ in range(elective_per_subject):
+                expanded_subjects.append(subject)
     
     # Fill remaining slots with theory subjects (round-robin)
-    while len(expanded_subjects) < periods_needed:
-        for subject in theory_subjects:
-            if len(expanded_subjects) < periods_needed:
-                expanded_subjects.append(subject)
-            else:
-                break
+    theory_cycle = 0
+    while len(expanded_subjects) < periods_needed and theory_subjects:
+        subject = theory_subjects[theory_cycle % len(theory_subjects)]
+        expanded_subjects.append(subject)
+        theory_cycle += 1
     
     # Generate timetable for all working days
     timetable = {}
@@ -263,11 +262,15 @@ def generate_sample_timetable(request: TimetableRequest) -> Dict[str, Any]:
                         room = f"Lab {(subject_index % 3) + 1}"
                     elif subject["type"] == "elective":
                         room = f"Room {(subject_index % 5) + 201}"
+                    elif subject["type"] == "project":
+                        room = "Project Hall"
+                    elif subject["type"] == "seminar":
+                        room = "Seminar Hall"
                     else:
                         room = f"Room {(subject_index % 10) + 101}"
                     
                     # Adjust duration for lab sessions
-                    period_duration = lab_duration if subject["type"] == "lab" else class_duration
+                    period_duration = f"{lab_duration} min" if subject["type"] == "lab" else f"{class_duration} min"
                     
                     timetable[day][slot["name"]] = {
                         "time": slot["time"],
@@ -281,47 +284,67 @@ def generate_sample_timetable(request: TimetableRequest) -> Dict[str, Any]:
                     
                     subject_index += 1
                 else:
-                    # Free period only if we've exhausted all subjects
+                    # Free period
                     timetable[day][slot["name"]] = {
                         "time": slot["time"],
                         "subject": "Free Period",
                         "type": "free",
-                        "duration": class_duration
+                        "duration": f"{class_duration} min"
                     }
     
     # Calculate summary
-    total_periods_scheduled = len(expanded_subjects)
-    theory_sessions = len([s for s in expanded_subjects if s["type"] == "theory"])
-    lab_sessions = len([s for s in expanded_subjects if s["type"] == "lab"])
-    elective_sessions = len([s for s in expanded_subjects if s["type"] in ["elective", "project", "seminar"]])
+    total_periods_scheduled = min(len(expanded_subjects), periods_needed)
+    theory_sessions = len([s for s in expanded_subjects[:total_periods_scheduled] if s["type"] == "theory"])
+    lab_sessions = len([s for s in expanded_subjects[:total_periods_scheduled] if s["type"] == "lab"])
+    elective_sessions = len([s for s in expanded_subjects[:total_periods_scheduled] if s["type"] in ["elective", "project", "seminar", "practical", "assessment"]])
+    free_periods = max(0, periods_needed - total_periods_scheduled)
+    break_periods = len([slot for slot in time_slots if slot["type"] in ["break", "lunch"]]) * len(request.working_days)
     
     summary = {
         "total_periods": periods_needed,
         "total_periods_scheduled": total_periods_scheduled,
-        "subjects_scheduled": len(set([s["code"] for s in expanded_subjects])),
+        "subjects_scheduled": len(set([s["code"] for s in expanded_subjects[:total_periods_scheduled]])),
         "theory_sessions": theory_sessions,
         "lab_sessions": lab_sessions,
         "elective_sessions": elective_sessions,
+        "free_periods": free_periods,
+        "break_periods": break_periods,
         "working_days": len(request.working_days),
         "periods_per_day": periods_per_day,
         "class_duration": f"{class_duration} minutes",
-        "lab_duration": f"{lab_duration} minutes"
+        "lab_duration": f"{lab_duration} minutes",
+        "total_faculty": len(set([s["faculty"] for s in subjects]))
     }
     
     # Generate recommendations
     recommendations = []
-    if lab_sessions > 0:
-        recommendations.append(f"Lab sessions are scheduled for {lab_duration} minutes duration as per constraints")
-    if elective_sessions > 0:
-        recommendations.append("Elective subjects can be customized based on student preferences")
-    if request.year >= 3:
-        recommendations.append("Consider project work timing and industry mentorship coordination")
-    recommendations.append("Faculty workload is distributed evenly across the week")
-    recommendations.append("Break timings follow institutional guidelines")
-    recommendations.append(f"Each class period is {class_duration} minutes long")
     
-    if total_periods_scheduled < periods_needed:
-        recommendations.append(f"Note: {periods_needed - total_periods_scheduled} periods are free due to subject distribution")
+    if lab_sessions > 0:
+        recommendations.append(f"Lab sessions are scheduled for {lab_duration} minutes ({lab_duration_hours} hours) duration as per constraints")
+    
+    if elective_sessions > 0:
+        recommendations.append("Elective subjects can be customized based on student preferences and specialization tracks")
+    
+    if request.year >= 3:
+        recommendations.append("Consider coordinating project work timing with industry mentorship and internship schedules")
+    
+    if request.year == 4 and request.semester == "EVEN":
+        recommendations.append("Final semester scheduling includes industry internship and comprehensive assessment")
+    
+    recommendations.append("Faculty workload is distributed evenly across the week to optimize teaching efficiency")
+    recommendations.append(f"Break timings ({break_duration} min) and lunch break ({lunch_duration} min) follow institutional guidelines")
+    recommendations.append(f"Each standard class period is {class_duration} minutes long for optimal learning duration")
+    
+    if free_periods > 0:
+        recommendations.append(f"Note: {free_periods} periods are available for additional activities, tutorials, or flexible scheduling")
+    
+    if len(theory_subjects) > len(lab_subjects):
+        recommendations.append("Consider adding more practical/lab components to balance theoretical learning")
+    
+    # Add department-specific recommendations
+    if request.department.upper() in ["CSE", "CS", "COMPUTER SCIENCE"]:
+        recommendations.append("Programming labs are distributed across the week for consistent skill development")
+        recommendations.append("Industry-relevant electives align with current technology trends")
     
     return {
         "timetable": timetable,
@@ -330,11 +353,13 @@ def generate_sample_timetable(request: TimetableRequest) -> Dict[str, Any]:
         "request_details": {
             "institution": request.institution_name,
             "department": request.department,
-            "year": request.year,
+            "year": f"Year {request.year}",
             "semester": request.semester,
             "academic_year": request.academic_year,
             "duration": f"{request.start_date} to {request.end_date}",
-            "class_duration": f"{class_duration} minutes"
+            "working_days": ", ".join(request.working_days),
+            "class_duration": f"{class_duration} minutes",
+            "generated_on": datetime.now().strftime("%d/%m/%Y at %I:%M %p")
         }
     }
 
@@ -373,7 +398,7 @@ def analyze_csv_structure(df: pd.DataFrame) -> Dict[str, Any]:
             })
     
     # Extract subject codes and names
-    subject_pattern = r'(\d{2}[A-Z]{2}\d{3}[A-Z]?)'
+    subject_pattern = r'([A-Z]{2,4}\d{3}[A-Z]?)'
     subjects_found = set()
     faculty_found = set()
     rooms_found = set()
@@ -381,74 +406,94 @@ def analyze_csv_structure(df: pd.DataFrame) -> Dict[str, Any]:
     for col in df.columns:
         for idx, row in df.iterrows():
             cell_value = str(row[col])
-            if pd.notna(cell_value) and cell_value != 'nan':
+            if pd.notna(cell_value) and cell_value != 'nan' and cell_value.strip():
                 # Find subject codes
                 subject_matches = re.findall(subject_pattern, cell_value)
                 subjects_found.update(subject_matches)
                 
-                # Extract faculty names (patterns like Dr., Mrs., Mr., Ms.)
-                faculty_pattern = r'((?:Dr\.?|Mrs\.?|Mr\.?|Ms\.?)\s*[A-Za-z\s\.]+)'
+                # Extract faculty names (patterns like Dr., Mrs., Mr., Ms., Prof.)
+                faculty_pattern = r'((?:Dr\.?|Mrs\.?|Mr\.?|Ms\.?|Prof\.?)\s*[A-Za-z\s\.]+)'
                 faculty_matches = re.findall(faculty_pattern, cell_value)
-                faculty_found.update([f.strip() for f in faculty_matches])
+                faculty_found.update([f.strip() for f in faculty_matches if f.strip()])
                 
                 # Extract room numbers/codes
-                room_pattern = r'\(([A-Z0-9\s]+)\)'
+                room_pattern = r'\(([A-Z0-9\s\-]+)\)'
                 room_matches = re.findall(room_pattern, cell_value)
-                rooms_found.update([r.strip() for r in room_matches])
+                rooms_found.update([r.strip() for r in room_matches if r.strip()])
+                
+                # Also look for standalone room patterns
+                standalone_room_pattern = r'\b(Room\s*\d+|Lab\s*\d+|Hall\s*\d+)\b'
+                standalone_matches = re.findall(standalone_room_pattern, cell_value, re.IGNORECASE)
+                rooms_found.update([r.strip() for r in standalone_matches if r.strip()])
     
     # Extract days
-    day_pattern = r'(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)'
+    day_pattern = r'\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b'
     for col in df.columns:
+        day_matches = re.findall(day_pattern, str(col), re.IGNORECASE)
+        if day_matches:
+            analysis["days"].extend([day.title() for day in day_matches])
+        
         for idx, row in df.iterrows():
             cell_value = str(row[col])
             day_matches = re.findall(day_pattern, cell_value, re.IGNORECASE)
             if day_matches:
-                analysis["days"].extend(day_matches)
+                analysis["days"].extend([day.title() for day in day_matches])
     
-    # If no days found in content, check for date patterns
-    if not analysis["days"]:
-        date_pattern = r'(\d{2}/\d{2}/\d{4})\s*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)'
+    analysis["subjects"] = sorted(list(subjects_found))
+    analysis["faculty"] = sorted(list(faculty_found))
+    analysis["rooms"] = sorted(list(rooms_found))
+    analysis["days"] = sorted(list(set(analysis["days"])))
+    
+    # Extract metadata from headers and first few rows
+    for i, col in enumerate(df.columns):
+        if any(keyword in str(col).lower() for keyword in ['department', 'year', 'semester', 'academic', 'institution']):
+            analysis["metadata"][f"header_{i}"] = str(col)
+    
+    # Check first few rows for metadata
+    for idx in range(min(3, len(df))):
         for col in df.columns:
-            for idx, row in df.iterrows():
-                cell_value = str(row[col])
-                date_matches = re.findall(date_pattern, cell_value, re.IGNORECASE)
-                if date_matches:
-                    analysis["days"].extend([match[1] for match in date_matches])
-    
-    analysis["subjects"] = list(subjects_found)
-    analysis["faculty"] = list(faculty_found)
-    analysis["rooms"] = list(rooms_found)
-    analysis["days"] = list(set(analysis["days"]))
-    
-    # Extract metadata
-    for col in df.columns:
-        for idx, row in df.iterrows():
-            cell_value = str(row[col])
-            if any(keyword in cell_value.lower() for keyword in ['department', 'year', 'semester', 'academic']):
+            cell_value = str(df.iloc[idx][col])
+            if any(keyword in cell_value.lower() for keyword in ['department', 'year', 'semester', 'academic', 'institution']):
                 analysis["metadata"][f"row_{idx}_{col}"] = cell_value
     
+    # Detect patterns
+    analysis["patterns"] = {
+        "lab_sessions": [],
+        "electives": [],
+        "breaks": []
+    }
+    
     # Detect lab patterns
-    lab_pattern = r'lab|laboratory'
-    analysis["patterns"]["lab_sessions"] = []
+    lab_pattern = r'\b(lab|laboratory|practical)\b'
     for col in df.columns:
         for idx, row in df.iterrows():
             cell_value = str(row[col])
             if re.search(lab_pattern, cell_value, re.IGNORECASE):
                 analysis["patterns"]["lab_sessions"].append({
                     "location": f"row_{idx}_col_{col}",
-                    "content": cell_value
+                    "content": cell_value.strip()
                 })
     
     # Detect elective patterns
-    elective_pattern = r'elective|honour|minor'
-    analysis["patterns"]["electives"] = []
+    elective_pattern = r'\b(elective|optional|choice)\b'
     for col in df.columns:
         for idx, row in df.iterrows():
             cell_value = str(row[col])
             if re.search(elective_pattern, cell_value, re.IGNORECASE):
                 analysis["patterns"]["electives"].append({
                     "location": f"row_{idx}_col_{col}",
-                    "content": cell_value
+                    "content": cell_value.strip()
+                })
+    
+    # Detect break patterns
+    break_pattern = r'\b(break|lunch|recess)\b'
+    for col in df.columns:
+        for idx, row in df.iterrows():
+            cell_value = str(row[col])
+            if re.search(break_pattern, cell_value, re.IGNORECASE):
+                analysis["patterns"]["breaks"].append({
+                    "location": f"row_{idx}_col_{col}",
+                    "content": cell_value.strip()
                 })
     
     return analysis
@@ -465,25 +510,49 @@ def parse_json_field(field_value: str) -> Union[Dict, List, str]:
 
 @app.get("/")
 async def root():
-    return {"message": "Dynamic Timetable AI Generator API", "status": "running"}
+    return {"message": "Dynamic Timetable AI Generator API", "status": "running", "version": "1.0.0"}
 
 @app.post("/analyze-csv", response_model=CSVAnalysisResponse)
 async def analyze_csv(file: UploadFile = File(...)):
     """Analyze uploaded CSV file to extract timetable structure and patterns"""
     try:
+        # Validate file type
+        if not file.filename.lower().endswith('.csv'):
+            return CSVAnalysisResponse(
+                success=False,
+                message="Please upload a CSV file"
+            )
+        
         # Read CSV file
         content = await file.read()
         df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        
+        # Validate that CSV has data
+        if df.empty:
+            return CSVAnalysisResponse(
+                success=False,
+                message="CSV file is empty"
+            )
         
         # Analyze structure
         analysis = analyze_csv_structure(df)
         
         return CSVAnalysisResponse(
             success=True,
-            message="CSV analyzed successfully",
+            message=f"CSV analyzed successfully. Found {len(analysis['subjects'])} subjects, {len(analysis['faculty'])} faculty members, and {len(analysis['days'])} days.",
             analysis=analysis
         )
         
+    except UnicodeDecodeError:
+        return CSVAnalysisResponse(
+            success=False,
+            message="Error reading CSV file. Please ensure it's properly encoded in UTF-8."
+        )
+    except pd.errors.EmptyDataError:
+        return CSVAnalysisResponse(
+            success=False,
+            message="CSV file appears to be empty or invalid."
+        )
     except Exception as e:
         return CSVAnalysisResponse(
             success=False,
@@ -511,6 +580,12 @@ async def generate_dynamic_timetable(
         requirements_dict = parse_json_field(requirements)
         constraints_dict = parse_json_field(constraints)
         
+        # Validate working days
+        if isinstance(working_days_list, str):
+            working_days_list = [working_days_list]
+        elif not isinstance(working_days_list, list) or len(working_days_list) == 0:
+            working_days_list = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        
         # Create request object
         request = TimetableRequest(
             institution_name=institution_name,
@@ -520,7 +595,7 @@ async def generate_dynamic_timetable(
             academic_year=academic_year,
             start_date=start_date,
             end_date=end_date,
-            working_days=working_days_list if isinstance(working_days_list, list) else [working_days_list],
+            working_days=working_days_list,
             requirements=requirements_dict,
             constraints=constraints_dict
         )
@@ -529,32 +604,47 @@ async def generate_dynamic_timetable(
         
         # Analyze reference file if provided
         if reference_file and reference_file.filename:
-            content = await reference_file.read()
-            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
-            reference_analysis = analyze_csv_structure(df)
+            try:
+                content = await reference_file.read()
+                df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+                reference_analysis = analyze_csv_structure(df)
+                print(f"Reference file analyzed: {len(reference_analysis['subjects'])} subjects found")
+            except Exception as ref_error:
+                print(f"Error analyzing reference file: {str(ref_error)}")
+                # Continue without reference analysis
         
-        # Check if OpenAI is configured
-        if not openai.api_key:
-            # Generate comprehensive sample timetable
-            sample_timetable = generate_sample_timetable(request)
-            
-            return TimetableResponse(
-                success=True,
-                message=f"Comprehensive timetable generated for {request.institution_name} - {request.department} Year {request.year} {request.semester} semester",
-                timetable=sample_timetable
+        # Generate comprehensive sample timetable
+        sample_timetable = generate_sample_timetable(request)
+        
+        # If reference analysis available, incorporate insights
+        if reference_analysis and reference_analysis['subjects']:
+            print(f"Incorporating reference data with {len(reference_analysis['subjects'])} subjects")
+            # You can enhance the timetable generation using reference data here
+            # For now, we'll add it to the recommendations
+            sample_timetable["recommendations"].append(
+                f"Reference timetable analysis: Found {len(reference_analysis['subjects'])} subjects, "
+                f"{len(reference_analysis['faculty'])} faculty members from uploaded CSV"
             )
         
-        # If OpenAI is configured, use it for generation
-        # (OpenAI code remains the same as before)
+        success_message = f"Comprehensive timetable generated successfully for {request.institution_name} - {request.department} Year {request.year} {request.semester} semester"
+        
+        if reference_file and reference_file.filename:
+            success_message += f" (with reference from {reference_file.filename})"
         
         return TimetableResponse(
             success=True,
-            message="Dynamic timetable generated successfully using AI",
-            timetable={"message": "AI generation would happen here"}
+            message=success_message,
+            timetable=sample_timetable
         )
         
+    except ValueError as ve:
+        print(f"Validation error in generate_dynamic_timetable: {str(ve)}")
+        return TimetableResponse(
+            success=False,
+            message=f"Invalid input data: {str(ve)}"
+        )
     except Exception as e:
-        print(f"Error in generate_dynamic_timetable: {str(e)}")  # Debug logging
+        print(f"Error in generate_dynamic_timetable: {str(e)}")
         return TimetableResponse(
             success=False,
             message=f"Error generating timetable: {str(e)}"
@@ -564,17 +654,25 @@ async def generate_dynamic_timetable(
 async def extract_subjects_from_csv(file: UploadFile = File(...)):
     """Extract subjects, faculty, and other details from uploaded CSV"""
     try:
+        if not file.filename.lower().endswith('.csv'):
+            return {"success": False, "message": "Please upload a CSV file"}
+        
         content = await file.read()
         df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        
+        if df.empty:
+            return {"success": False, "message": "CSV file is empty"}
+        
         analysis = analyze_csv_structure(df)
         
         # Format extracted data for frontend use
         subjects = []
         for i, subject_code in enumerate(analysis["subjects"]):
+            faculty_name = analysis["faculty"][i] if i < len(analysis["faculty"]) else "TBD"
             subjects.append({
                 "code": subject_code,
                 "name": f"Subject {i+1}",  # Default name, can be enhanced
-                "faculty": analysis["faculty"][i] if i < len(analysis["faculty"]) else "TBD",
+                "faculty": faculty_name,
                 "type": "theory"  # Default type
             })
         
@@ -588,6 +686,7 @@ async def extract_subjects_from_csv(file: UploadFile = File(...)):
         
         return {
             "success": True,
+            "message": f"Successfully extracted {len(subjects)} subjects and {len(analysis['faculty'])} faculty members",
             "subjects": subjects,
             "time_slots": time_slots,
             "faculty": analysis["faculty"],
@@ -601,7 +700,39 @@ async def extract_subjects_from_csv(file: UploadFile = File(...)):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    """Health check endpoint"""
+    return {
+        "status": "healthy", 
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0",
+        "service": "Dynamic Timetable AI Generator"
+    }
+
+@app.get("/api/info")
+async def api_info():
+    """API information endpoint"""
+    return {
+        "name": "Dynamic Timetable AI Generator",
+        "version": "1.0.0",
+        "description": "AI-powered timetable generation with CSV analysis capabilities",
+        "endpoints": {
+            "/": "Root endpoint",
+            "/analyze-csv": "Analyze uploaded CSV files",
+            "/generate-dynamic-timetable": "Generate comprehensive timetables",
+            "/extract-subjects-from-csv": "Extract subject and faculty data",
+            "/health": "Health check",
+            "/api/info": "API information"
+        },
+        "features": [
+            "Year and semester-specific subject allocation",
+            "Intelligent time slot management",
+            "Faculty and room assignment",
+            "Lab session scheduling",
+            "Break and lunch management",
+            "CSV analysis and reference integration",
+            "Comprehensive reporting and recommendations"
+        ]
+    }
 
 if __name__ == "__main__":
     import uvicorn

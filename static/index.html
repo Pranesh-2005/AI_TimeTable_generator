@@ -6,488 +6,62 @@
     <title>Dynamic Timetable AI Generator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-            --dark-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --light-bg: #f8fafc;
-            --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-            --card-shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.12);
-            --border-radius: 16px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            line-height: 1.6;
+            background-color: #f8f9fa;
         }
-
         .header {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 4rem 0;
-            position: relative;
-            overflow: hidden;
+            padding: 2rem 0;
         }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            opacity: 0.3;
-        }
-
-        .header .container {
-            position: relative;
-            z-index: 1;
-        }
-
-        .header h1 {
-            font-weight: 700;
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .header .lead {
-            font-size: 1.25rem;
-            font-weight: 400;
-            opacity: 0.9;
-        }
-
-        .container {
-            max-width: 1200px;
-        }
-
         .card {
             border: none;
-            box-shadow: var(--card-shadow);
-            border-radius: var(--border-radius);
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             margin-bottom: 2rem;
-            transition: var(--transition);
-            background: white;
-            overflow: hidden;
         }
-
-        .card:hover {
-            box-shadow: var(--card-shadow-hover);
-            transform: translateY(-2px);
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
-            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
-            padding: 1.5rem;
-            font-weight: 600;
-            color: #4c63d2;
-        }
-
-        .card-header h5 {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .card-body {
-            padding: 2rem;
-        }
-
         .btn-primary {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            border-radius: 12px;
-            padding: 12px 24px;
-            font-weight: 500;
-            transition: var(--transition);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-outline-primary {
-            border: 2px solid #667eea;
-            color: #667eea;
-            border-radius: 12px;
-            padding: 10px 20px;
-            font-weight: 500;
-            transition: var(--transition);
-        }
-
-        .btn-outline-primary:hover {
-            background: var(--primary-gradient);
-            border-color: transparent;
-            transform: translateY(-1px);
-        }
-
-        .btn-outline-secondary {
-            border: 2px solid #6c757d;
-            color: #6c757d;
-            border-radius: 12px;
-            padding: 10px 20px;
-            font-weight: 500;
-            transition: var(--transition);
-        }
-
-        .btn-outline-secondary:hover {
-            background: #6c757d;
-            border-color: #6c757d;
-            transform: translateY(-1px);
-        }
-
-        .btn-lg {
-            padding: 16px 32px;
-            font-size: 1.1rem;
-            border-radius: 16px;
-        }
-
-        .form-control, .form-select {
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 0.95rem;
-            transition: var(--transition);
-            background: #fafbfc;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            background: white;
-        }
-
-        .form-label {
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 8px;
-        }
-
         .upload-area {
-            border: 3px dashed #cbd5e0;
-            border-radius: var(--border-radius);
-            padding: 3rem 2rem;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 2rem;
             text-align: center;
-            transition: var(--transition);
+            transition: all 0.3s ease;
             cursor: pointer;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            position: relative;
-            overflow: hidden;
         }
-
-        .upload-area::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--primary-gradient);
-            opacity: 0;
-            transition: var(--transition);
-        }
-
         .upload-area:hover {
             border-color: #667eea;
-            background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
-            transform: translateY(-2px);
+            background-color: #f8f9ff;
         }
-
-        .upload-area:hover::before {
-            opacity: 0.05;
-        }
-
         .upload-area.dragover {
             border-color: #667eea;
-            background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
-            transform: scale(1.02);
+            background-color: #f0f0ff;
         }
-
-        .upload-area.dragover::before {
-            opacity: 0.1;
-        }
-
-        .upload-area > * {
-            position: relative;
-            z-index: 1;
-        }
-
-        .upload-area i {
-            color: #9ca3af;
-            margin-bottom: 1rem;
-        }
-
-        .upload-area h5 {
-            color: #374151;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .upload-area p {
-            color: #6b7280;
-            margin-bottom: 1.5rem;
-        }
-
         .analysis-result {
-            background: linear-gradient(135deg, #f0fff4 0%, #ecfdf5 100%);
-            border: 1px solid #a7f3d0;
-            border-radius: var(--border-radius);
-            padding: 1.5rem;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
             margin: 1rem 0;
         }
-
-        .progress {
-            height: 6px;
-            border-radius: 10px;
-            background: #e2e8f0;
-            overflow: hidden;
+        .timetable-container {
+            overflow-x: auto;
         }
-
-        .progress-bar {
-            background: var(--primary-gradient);
-            border-radius: 10px;
-            transition: width 0.6s ease;
-        }
-
-        .step {
-            display: none;
-            animation: fadeIn 0.5s ease-in-out;
-        }
-
-        .step.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
         .loading {
             display: none;
         }
-
-        .spinner-border {
-            animation: spin 1s linear infinite;
+        .step {
+            display: none;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .step.active {
+            display: block;
         }
-
-        .alert {
-            border: none;
-            border-radius: var(--border-radius);
-            padding: 1rem 1.5rem;
-        }
-
-        .alert-success {
-            background: linear-gradient(135deg, #f0fff4 0%, #ecfdf5 100%);
-            color: #065f46;
-            border-left: 4px solid #10b981;
-        }
-
-        .alert-warning {
-            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-            color: #92400e;
-            border-left: 4px solid #f59e0b;
-        }
-
-        .alert-info {
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            color: #1e40af;
-            border-left: 4px solid #3b82f6;
-        }
-
-        .badge {
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-weight: 500;
-            font-size: 0.75rem;
-        }
-
-        .badge.bg-primary {
-            background: var(--primary-gradient) !important;
-        }
-
-        .badge.bg-success {
-            background: var(--success-gradient) !important;
-        }
-
-        .badge.bg-info {
-            background: var(--warning-gradient) !important;
-        }
-
-        .badge.bg-secondary {
-            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
-        }
-
-        .form-check-input:checked {
-            background-color: #667eea;
-            border-color: #667eea;
-        }
-
-        .form-check-input:focus {
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
-        }
-
-        .form-check-label {
-            font-weight: 500;
-            color: #374151;
-        }
-
-        .table {
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--card-shadow);
-            background: white;
-        }
-
-        .table thead th {
-            background: var(--primary-gradient);
-            color: white;
-            font-weight: 600;
-            border: none;
-            padding: 1rem;
-        }
-
-        .table tbody td {
-            padding: 1rem;
-            border-color: #f1f5f9;
-            vertical-align: middle;
-        }
-
-        .table tbody tr:hover {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        }
-
-        .timetable-container {
-            overflow-x: auto;
-            border-radius: var(--border-radius);
-        }
-
         .error-message {
-            color: #dc2626;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-            font-weight: 500;
-        }
-
-        .text-primary {
-            color: #667eea !important;
-        }
-
-        .bg-light {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
-        }
-
-        /* Responsive improvements */
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .header .lead {
-                font-size: 1rem;
-            }
-            
-            .card-body {
-                padding: 1.5rem;
-            }
-            
-            .upload-area {
-                padding: 2rem 1rem;
-            }
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary-gradient);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-        }
-
-        /* Enhanced animations */
-        .btn {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .btn:hover::before {
-            left: 100%;
-        }
-
-        /* Loading animation improvements */
-        .loading .spinner-border {
-            width: 3rem;
-            height: 3rem;
-            border-width: 4px;
-            border-color: #667eea;
-            border-right-color: transparent;
-        }
-
-        /* File info styling */
-        #fileInfo .alert {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        #fileInfo .btn {
-            margin-left: 1rem;
-        }
-
-        /* Progress steps styling */
-        .progress-steps {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1rem;
-        }
-
-        .progress-steps small {
-            font-weight: 500;
-            color: #6b7280;
-            font-size: 0.8rem;
+            color: red;
+            font-size: 12px;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -508,10 +82,10 @@
         <!-- Progress Steps -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="progress">
+                <div class="progress" style="height: 3px;">
                     <div class="progress-bar" id="progressBar" role="progressbar" style="width: 25%"></div>
                 </div>
-                <div class="progress-steps">
+                <div class="d-flex justify-content-between mt-2">
                     <small class="text-muted">Step 1: Upload/Configure</small>
                     <small class="text-muted">Step 2: Requirements</small>
                     <small class="text-muted">Step 3: Generate</small>
@@ -541,15 +115,14 @@
                             
                             <div id="fileInfo" style="display: none;" class="mt-3">
                                 <div class="alert alert-success">
-                                    <div>
-                                        <i class="fas fa-check-circle me-2"></i>
-                                        <span id="fileName"></span>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="handleClearFile()">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <span id="fileName"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger float-end" onclick="handleClearFile()">
                                         Remove
                                     </button>
                                 </div>
                             </div>
+
                             <div id="analysisResult" style="display: none;" class="analysis-result">
                                 <h6><i class="fas fa-chart-bar me-2"></i>Analysis Results:</h6>
                                 <div id="analysisContent"></div>
@@ -557,6 +130,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="col-lg-6">
                     <div class="card">
                         <div class="card-header">
@@ -565,22 +139,23 @@
                         <div class="card-body">
                             <div class="mb-3">
                                 <label class="form-label">Institution Name *</label>
-                                <input type="text" class="form-control" id="institutionName"
-                                        placeholder="Enter institution name" required>
+                                <input type="text" class="form-control" id="institutionName" 
+                                       placeholder="Enter institution name" required>
                             </div>
                             
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Department *</label>
-                                    <input type="text" class="form-control" id="department"
-                                            placeholder="e.g., Computer Science" required>
+                                    <input type="text" class="form-control" id="department" 
+                                           placeholder="e.g., Computer Science" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Academic Year *</label>
-                                    <input type="text" class="form-control" id="academicYear"
-                                            placeholder="e.g., 2024-25" required>
+                                    <input type="text" class="form-control" id="academicYear" 
+                                           placeholder="e.g., 2024-25" required>
                                 </div>
                             </div>
+
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Year *</label>
@@ -601,6 +176,7 @@
                                     </select>
                                 </div>
                             </div>
+
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Start Date *</label>
@@ -611,6 +187,7 @@
                                     <input type="date" class="form-control" id="endDate" required>
                                 </div>
                             </div>
+
                             <div class="mb-3">
                                 <label class="form-label">Working Days *</label>
                                 <div class="row">
@@ -642,6 +219,7 @@
                                     </div>
                                 </div>
                             </div>
+
                             <div class="text-end">
                                 <button type="button" class="btn btn-primary" onclick="handleNextStep(2)">
                                     Next: Define Requirements <i class="fas fa-arrow-right ms-2"></i>
@@ -701,11 +279,13 @@
                             </div>
                         </div>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Additional Requirements</label>
-                        <textarea class="form-control" id="additionalRequirements" rows="3"
-                                   placeholder="Enter any specific requirements, constraints, or preferences..."></textarea>
+                        <textarea class="form-control" id="additionalRequirements" rows="3" 
+                                  placeholder="Enter any specific requirements, constraints, or preferences..."></textarea>
                     </div>
+
                     <div class="text-end">
                         <button type="button" class="btn btn-outline-secondary me-2" onclick="handlePrevStep(1)">
                             <i class="fas fa-arrow-left me-2"></i>Previous
@@ -734,11 +314,13 @@
                             <i class="fas fa-magic me-2"></i>Generate AI Timetable
                         </button>
                     </div>
+
                     <div id="generatingContent" class="loading">
-                        <div class="spinner-border text-primary mb-3"></div>
+                        <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
                         <h5>Generating Your Timetable...</h5>
                         <p class="text-muted">This may take a few moments</p>
                     </div>
+
                     <div class="text-end mt-4">
                         <button type="button" class="btn btn-outline-secondary" onclick="handlePrevStep(2)">
                             <i class="fas fa-arrow-left me-2"></i>Previous
@@ -773,12 +355,13 @@
 
     <!-- Load Bootstrap JS first -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.bundle.min.js"></script>
+
     <!-- Main Application Script -->
     <script>
-console.log('Loading main app script...');
+        console.log('Loading main app script...');
 
 // Global variables
-const API_BASE_URL = 'https://ai-timetable-generator.onrender.com';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 let uploadedFile = null;
 let analysisData = null;
 let currentStep = 1;
@@ -1074,22 +657,46 @@ async function generateTimetable() {
         
         console.log('Response:', result);
         
-        // FIXED: Check for the correct structure that your backend returns
-        if (result.success && result.timetable && typeof result.timetable === 'object') {
-            // Check if it has the timetable data (either nested or direct)
-            const timetableData = result.timetable.timetable || result.timetable;
+        // ENHANCED ERROR CHECKING: Check what the backend actually returned
+        if (result.success) {
+            console.log('=== BACKEND ANALYSIS ===');
+            console.log('Timetable object:', result.timetable);
+            console.log('Timetable type:', typeof result.timetable);
+            console.log('Timetable keys:', Object.keys(result.timetable || {}));
             
-            if (timetableData && typeof timetableData === 'object' && Object.keys(timetableData).length > 0) {
-                console.log('✅ Backend returned valid timetable data');
-                displayTimetable(result.timetable);
-                nextStep(4);
+            // Check if backend returned placeholder message
+            if (result.timetable && result.timetable.message) {
+                showDebug(`⚠️ Backend Issue: ${result.timetable.message}`);
+                displayBackendError(result.timetable.message);
+                return;
+            }
+            
+            // Check for valid timetable structure
+            const timetable = result.timetable?.timetable || result.timetable;
+            
+            if (timetable && typeof timetable === 'object' && !timetable.message) {
+                // Check if it has day-wise data
+                const days = Object.keys(timetable);
+                const hasValidDays = days.some(day => 
+                    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].includes(day)
+                );
+                
+                if (hasValidDays) {
+                    console.log('✅ Valid timetable data received');
+                    displayTimetable(result.timetable);
+                    nextStep(4);
+                } else {
+                    console.error('❌ Invalid timetable structure - no valid days found');
+                    showDebug('Invalid timetable structure - no days found');
+                    displayBackendError('Backend returned invalid timetable structure');
+                }
             } else {
-                console.warn('❌ Backend returned success but invalid timetable structure');
-                showDebug('Backend returned invalid timetable structure');
-                alert('Error: Invalid timetable data received from server');
+                console.error('❌ No valid timetable data in response');
+                showDebug('No valid timetable data in response');
+                displayBackendError('No valid timetable data received from backend');
             }
         } else {
-            console.error('❌ Backend returned error or no timetable');
+            console.error('❌ Backend returned error');
             alert('Error generating timetable: ' + (result.message || 'Unknown error'));
         }
     } catch (error) {
@@ -1100,6 +707,43 @@ async function generateTimetable() {
         document.getElementById('generateContent').style.display = 'block';
         document.getElementById('generatingContent').style.display = 'none';
     }
+}
+
+function displayBackendError(message) {
+    const container = document.getElementById('timetableContent');
+    container.innerHTML = `
+        <div class="alert alert-warning">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>Backend Development Notice</h5>
+            <p><strong>Issue:</strong> ${message}</p>
+            <hr>
+            <h6>For Backend Developer:</h6>
+            <p>The backend endpoint <code>/generate-dynamic-timetable</code> needs to be implemented to return actual timetable data instead of placeholder messages.</p>
+            <p><strong>Expected Response Structure:</strong></p>
+            <pre class="bg-light p-2 rounded"><code>{
+  "success": true,
+  "message": "Timetable generated successfully",
+  "timetable": {
+    "timetable": {
+      "Monday": {
+        "Period_1": {
+          "subject_code": "CS101",
+          "subject": "Computer Science",
+          "faculty": "Dr. Smith",
+          "room": "Room 101",
+          "type": "Theory",
+          "time": "09:00-10:00"
+        },
+        // ... more periods
+      },
+      // ... more days
+    },
+    "summary": { /* stats */ },
+    "recommendations": [ /* suggestions */ ]
+  }
+}</code></pre>
+        </div>
+    `;
+    nextStep(4); // Still show the results step to display the error
 }
 
 function displayTimetable(timetableData) {
